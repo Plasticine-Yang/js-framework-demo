@@ -75,7 +75,7 @@ template.content.cloneNode(true)
  * state.sum === 5 // true
  * ```
  */
-function reactiveSystemDemo() {
+function reactiveSystem() {
   /** 用于记录 propertyKey 与 effects 的映射关系，方便在 set 的时候找到相应的 effect 去执行 */
   const propertyKeyToEffectsMap = new Map()
 
@@ -164,33 +164,10 @@ function reactiveSystemDemo() {
     },
   })
 
-  state.foo = 1
-  state.bar = 2
-
-  useEffect(() => {
-    state.sum = state.foo + state.bar
-  })
-
-  console.log(state.sum === 3)
-
-  state.foo = 2
-  Promise.resolve().then(() => {
-    console.log(state.sum === 4)
-
-    state.bar = 3
-    Promise.resolve().then(() => {
-      console.log(state.sum === 5)
-    })
-  })
-
-  setTimeout(() => {
-    state.foo = 4
-    state.bar = 4
-    console.log(state.sum === 5)
-    Promise.resolve().then(() => {
-      console.log(state.sum === 8)
-    })
-  })
+  return {
+    state,
+    useEffect,
+  }
 }
 
 /**
@@ -210,7 +187,7 @@ function reactiveSystemDemo() {
  * }
  * ```
  */
-function domRenderingDemo() {
+function domRendering() {
   const tokensToTemplates = new WeakMap()
 
   function transformHTMLStringToTemplate(htmlString) {
@@ -254,14 +231,92 @@ function domRenderingDemo() {
     return html`<div class="${state.color}">${state.text}</div>`
   }
 
+  return {
+    render,
+  }
+}
+
+function runDemo() {
+  const reactiveSystemDemo = () => {
+    const { state, useEffect } = reactiveSystem()
+
+    state.foo = 1
+    state.bar = 2
+
+    useEffect(() => {
+      state.sum = state.foo + state.bar
+    })
+
+    console.log(state.sum === 3)
+
+    state.foo = 2
+    Promise.resolve().then(() => {
+      console.log(state.sum === 4)
+
+      state.bar = 3
+      Promise.resolve().then(() => {
+        console.log(state.sum === 5)
+      })
+    })
+
+    setTimeout(() => {
+      state.foo = 4
+      state.bar = 4
+      console.log(state.sum === 5)
+      Promise.resolve().then(() => {
+        console.log(state.sum === 8)
+      })
+    })
+  }
+
+  const domRenderingDemo = () => {
+    const { render } = domRendering()
+
+    const app = document.querySelector('#app')
+    app.appendChild(render({ color: 'red', text: 'Red' }))
+    app.appendChild(render({ color: 'blue', text: 'Blue' }))
+  }
+
+  reactiveSystemDemo()
+  domRenderingDemo()
+}
+
+/**
+ * 3. 组合响应式系统 & DOM Rendering
+ */
+function combiningReactiveSystemAndDOMRendering() {
+  const { state, useEffect } = reactiveSystem()
+  const { render } = domRendering()
+
   const app = document.querySelector('#app')
-  app.appendChild(render({ color: 'red', text: 'Red' }))
-  app.appendChild(render({ color: 'blue', text: 'Blue' }))
+
+  state.color = 'blue'
+  state.count = 0
+
+  useEffect(() => {
+    console.log('rendering', state)
+    const dom = render(state)
+
+    if (app.firstElementChild) {
+      app.firstElementChild.replaceWith(dom)
+    } else {
+      app.appendChild(dom)
+    }
+  })
+
+  useEffect(() => {
+    state.text = `count is: ${state.count}`
+  })
+
+  setInterval(() => {
+    state.count++
+  }, 1000)
 }
 
 function main() {
-  reactiveSystemDemo()
-  domRenderingDemo()
+  // runDemo()
+
+  combiningReactiveSystemAndDOMRendering()
 }
 
 main()
