@@ -53,7 +53,7 @@ template.content.cloneNode(true)
 /**
  * 1. 响应式系统
  *
- * 理想效果：
+ * dream code
  *
  * ```js
  * const state = {}
@@ -193,8 +193,75 @@ function reactiveSystemDemo() {
   })
 }
 
+/**
+ * 2. DOM Rendering
+ *
+ * 目标：传入一个状态，，要做到以下两点：
+ * 1. 根据这个状态构建 DOM 树
+ * 2. 高效更新 DOM 树
+ *
+ * dream code
+ *
+ * ```js
+ * function render(state) {
+ *   return html`
+ *     <div class="${state.color}">${state.text}</div>
+ *   `
+ * }
+ * ```
+ */
+function domRenderingDemo() {
+  const tokensToTemplates = new WeakMap()
+
+  function transformHTMLStringToTemplate(htmlString) {
+    const template = document.createElement('template')
+    template.innerHTML = htmlString
+
+    return template
+  }
+
+  function replaceStubs(stringWithStubs, valueOfStubs) {
+    return stringWithStubs.replace(/__stub-(\d+)__/g, (_, index) => valueOfStubs[index])
+  }
+
+  function html(tokens, ...expressions) {
+    let templateWithStubs = tokensToTemplates.get(tokens)
+
+    if (!templateWithStubs) {
+      const stubs = expressions.map((_, index) => `__stub-${index}__`)
+      const tokensWithStubs = tokens.map((token, index) => (stubs[index - 1] ?? '') + token)
+      const htmlStringWithStubs = tokensWithStubs.join('')
+
+      templateWithStubs = transformHTMLStringToTemplate(htmlStringWithStubs)
+      tokensToTemplates.set(tokens, templateWithStubs)
+    }
+
+    const clonedNodeWithStubs = templateWithStubs.content.cloneNode(true)
+    const element = clonedNodeWithStubs.firstElementChild
+
+    // 替换属性中的 stubs
+    for (const { name, value } of element.attributes) {
+      element.setAttribute(name, replaceStubs(value, expressions))
+    }
+
+    // 替换 textContent 中的 stubs
+    element.textContent = replaceStubs(element.textContent, expressions)
+
+    return element
+  }
+
+  function render(state) {
+    return html`<div class="${state.color}">${state.text}</div>`
+  }
+
+  const app = document.querySelector('#app')
+  app.appendChild(render({ color: 'red', text: 'Red' }))
+  app.appendChild(render({ color: 'blue', text: 'Blue' }))
+}
+
 function main() {
   reactiveSystemDemo()
+  domRenderingDemo()
 }
 
 main()
