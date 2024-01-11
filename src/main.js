@@ -305,7 +305,7 @@ function combiningReactiveSystemAndDOMRendering() {
   })
 
   useEffect(() => {
-    state.text = `count is: ${state.count}`
+    state.text = `${state.count}`
   })
 
   setInterval(() => {
